@@ -8,78 +8,73 @@
 
 // using namespace std;
 
-int main(int argc, const char *argv[])
-{
+void printUsage(const char *argv0) {
+    std::cout << "Usage:" << std::endl;
+    std::cout << argv0 << " [number of commands]" << std::endl;
+}
+
+void processCommands(int bulkCommandsLimit) {
+    std::string command;
+    auto handle = async::connect(static_cast<std::size_t>(bulkCommandsLimit));
+
+    while (std::cin >> command) {
+        async::receive(handle, command.c_str(), command.size());
+    }
+
+    async::disconnect(handle);
+}
+
+void runExample1(int bulkCommandsLimit) {
+    std::cout << std::endl << "example1: " << std::endl;
+
+    std::istringstream input("cmd1\ncmd2\ncmd3\ncmd4\ncmd5\nEOF");
+    helpers::stream_redirect redirect {std::cin, input.rdbuf()};
+
+    processCommands(bulkCommandsLimit);
+}
+
+void runExample2(int bulkCommandsLimit) {
+    std::cout << std::endl << "example2: " << std::endl;
+
+    std::stringstream input;
+    input << "cmd1\n"
+          << "cmd2\n"
+          << "{\n"
+          << "cmd3\n"
+          << "cmd4\n"
+          << "}\n"
+          << "{\n"
+          << "cmd5\n"
+          << "cmd6\n"
+          << "{\n"
+          << "cmd7\n"
+          << "cmd8\n"
+          << "}\n"
+          << "cmd9\n"
+          << "}\n"
+          << "{\n"
+          << "cmd10\n"
+          << "cmd11\n"
+          << "EOF\n";
+
+    helpers::stream_redirect redirect {std::cin, input.rdbuf()};
+
+    processCommands(bulkCommandsLimit);
+}
+
+int main(int argc, const char *argv[]) {
     std::cout << "Async app version: " << PROJECT_VERSION << std::endl;
 
-    const auto bulkSize = argc;
-    if (bulkSize != 2) {
-        std::cout << "Usage:" << std::endl;
-        std::cout << argv[0] << " [number of commands]" << std::endl;
+    if (argc != 2) {
+        printUsage(argv[0]);
         return 1;
     }
 
-    // обработка параметра командной строки с числом команд в блоке
-    const int bulkCommandsLimit = std::atoi(argv[1]);
-    if (bulkCommandsLimit < 1)
-        return 0;
+    int bulkCommandsLimit = std::atoi(argv[1]);
+    if (bulkCommandsLimit < 1) return 0;
 
-    // обработка набора команд
-    auto cinCmdProcessing = [bulkCommandsLimit]()
-    {
-        std::string strCommand;
-        auto connectHandler = async::connect(static_cast<std::size_t>(bulkCommandsLimit));
-
-        while (std::cin >> strCommand) {
-            async::receive(connectHandler, strCommand.c_str(), strCommand.size());
-        }
-
-        async::disconnect(connectHandler);
-    };
-
-    // examples
-
-    { // обработка первого примера блока команд
-        
-        std::cout << std::endl << "example1: " << std::endl;
-
-        std::istringstream inputStream("cmd1\ncmd2\ncmd3\ncmd4\ncmd5\nEOF");
-        helpers::stream_redirect sr {std::cin, inputStream.rdbuf()};
-
-        cinCmdProcessing();
-    
-    }
-
-    { // обработка второго примера блока команд
-        
-        std::cout << std::endl << "example2: " << std::endl;
-
-        std::stringstream inputStream; 
-        inputStream << "cmd1" << std::endl
-        << "cmd2" << std::endl
-        << "{" << std::endl
-        << "cmd3" << std::endl
-        << "cmd4" << std::endl
-        << "}" << std::endl
-        << "{" << std::endl
-        << "cmd5" << std::endl
-        << "cmd6" << std::endl
-        << "{" << std::endl
-        << "cmd7" << std::endl
-        << "cmd8" << std::endl
-        << "}" << std::endl
-        << "cmd9" << std::endl
-        << "}" << std::endl
-        << "{" << std::endl
-        << "cmd10" << std::endl
-        << "cmd11" << std::endl
-        << "EOF" << std::endl;
-
-        helpers::stream_redirect sr {std::cin, inputStream.rdbuf()};
-    
-        cinCmdProcessing();
-
-    }
+    runExample1(bulkCommandsLimit);
+    runExample2(bulkCommandsLimit);
 
     return 0;
 }
